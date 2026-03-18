@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  linkedInAuth LinkedInAuth?
+  sessions     Session[]
+
+  @@map("users")
+}
+
+model LinkedInAuth {
+  userId       String   @id @map("user_id")
+  linkedInId   String   @unique @map("linkedin_id")
+  accessToken  String   @map("access_token")
+  refreshToken String   @map("refresh_token")
+  displayName  String?  @map("display_name")
+  expiresAt    DateTime @map("expires_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("linkedin_auth")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  status    String   @default("uploaded")
+  manifest  String?  // JSON string of FileManifestEntry[]
+  totalSize Int?     @map("total_size")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis    Analysis?
+  summary     Summary?
+  publication Publication?
+
+  @@map("sessions")
+}
+
+model Analysis {
+  sessionId  String   @id @map("session_id")
+  attributes String   // JSON string of ProjectAttributes
+  confidence String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("analyses")
+}
+
+model Summary {
+  sessionId      String   @id @map("session_id")
+  content        String
+  characterCount Int      @map("character_count")
+  hashtags       String?  // JSON array
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("summaries")
+}
+
+model Publication {
+  sessionId   String   @id @map("session_id")
+  postUrn     String   @map("post_urn")
+  postUrl     String   @map("post_url")
+  publishedAt DateTime @default(now()) @map("published_at")
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("publications")
+}
